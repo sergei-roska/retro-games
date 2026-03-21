@@ -1,8 +1,8 @@
 # Retro Games
 
-Retro Games is a browser-based arcade collection built as a single Next.js application. The project presents six standalone game modules inside a shared retro-terminal interface with tactile UI styling, local persistence for session data, and a small server-side records API for top scores.
+Retro Games is a retro-terminal game hub built as a single Next.js application. It bundles six playable browser games under one visual system, with shared navigation, tactile UI styling, local persistence for session data, and a small records API for leaderboard-style score storage.
 
-The current build includes:
+The project currently includes:
 - Tetris
 - Snake
 - Poker
@@ -10,49 +10,38 @@ The current build includes:
 - Sea Battle
 - Tic-Tac-Toe
 
-## Project Overview
+## Stack
 
-The application lives in the `frontend` directory and uses the Next.js App Router. Each game has its own route, while the homepage acts as a launcher for the full collection.
-
-Core characteristics:
-- Single monolithic frontend application
-- Shared retro terminal visual language across all games
-- TypeScript-based codebase
-- Tailwind CSS v4 styling
-- Local score persistence via JSON file fallback logic
-- Client-side persistence for credits, settings, and match history where needed
-
-## Tech Stack
-
-- Next.js 16
+- Next.js 16 App Router
 - React 19
 - TypeScript
 - Tailwind CSS 4
 - ESLint
 - Local JSON storage for records
-- LocalStorage for per-game session state
+- LocalStorage for game-specific runtime state
 
-## Repository Structure
+## Repository Layout
 
 ```text
 .
-├── frontend/              # Next.js application
-│   ├── app/               # App Router pages and API routes
-│   ├── components/        # Game UIs and shared components
-│   ├── data/              # Example records data
-│   ├── lib/               # Record helpers and app utilities
-│   └── public/audio/      # Audio assets for supported games
-└── specs/                 # Design and gameplay specs per game
+├── frontend/
+│   ├── app/                # Routes, pages, and API handlers
+│   ├── components/         # Game components and shared UI
+│   ├── data/               # Example leaderboard data
+│   ├── lib/                # Data helpers and client/server utilities
+│   ├── public/audio/       # Audio assets
+│   └── package.json
+└── specs/                  # Gameplay and visual specs for each game
 ```
 
-## Getting Started
+## Run Locally
 
-### Prerequisites
+### Requirements
 
-- Node.js 18 or newer
+- Node.js 18+
 - npm
 
-### Installation
+### Install
 
 ```bash
 cd frontend
@@ -68,7 +57,7 @@ npm run dev
 
 Open `http://localhost:3000`.
 
-### Production Build
+### Production
 
 ```bash
 cd frontend
@@ -83,103 +72,207 @@ cd frontend
 npm run lint
 ```
 
-## Records and Persistence
+## Main Routes
 
-The project does not require an external database.
+- `/` - hub page with links to all games
+- `/tetris`
+- `/snake`
+- `/poker`
+- `/blackjack`
+- `/seabattle`
+- `/tictactoe`
+- `/palette` - visual palette / design-system page
+- `/api/records` - leaderboard API endpoint
 
-- Global score tables are read from `frontend/data/records.json` when present.
-- If that file does not exist, the app falls back to `frontend/data/records.json.example`.
-- Scores are exposed through `frontend/app/api/records/route.ts`.
-- Some games also store session state locally in the browser, including credits and match history.
+## Data and Persistence
+
+The app does not depend on an external database.
+
+Implemented persistence:
+- Global records are served through `frontend/app/api/records/route.ts`.
+- Server-side record storage uses `frontend/data/records.json` when present.
+- If `frontend/data/records.json` is missing, the app falls back to `frontend/data/records.json.example`.
+- Snake submits scores under the `snake` key and stores the last operator name in `localStorage`.
+- Tetris reads and submits scores through the shared records API.
+- Poker stores credits in `localStorage` under `poker_credits`.
+- Blackjack stores credits in `localStorage` under `bj_credits`.
+- Tic-Tac-Toe stores win/loss/draw history in `localStorage` under `ttt_stats`.
 
 ## Games
 
-### Tetris
-
-Classic 10x20 falling-block gameplay with a canvas renderer and a separate preview HUD for the next piece.
-
-Highlights:
-- Progressive speed scaling every 10 cleared lines
-- Mechanical audio cues for start, ticks, line clears, and game over
-- Stable drop loop designed to avoid rhythm skips
-- Pause support and tactile terminal HUD presentation
+### 1. Tetris
 
 Route: `/tetris`
 
-### Snake
+Tetris is implemented as the central “terminal core” game and uses a dedicated canvas-based playfield with a side HUD and leaderboard integration.
 
-A faster, more experimental take on Snake with selectable board sizes, mode toggles, rhythm-based progression, and power-up variants.
+Implemented features:
+- Classic falling-block gameplay on a 10x20 board
+- Next-piece preview
+- Score and line tracking
+- Level / velocity progression during play
+- Game-over modal with score submission
+- Server-backed leaderboard read/write flow through `/api/records`
+- Desktop and tablet oriented layout
 
-Highlights:
-- 20x20 and 30x30 field options
-- Combo scoring when food is consumed in quick succession
-- Optional mission mode, obstacles, and special packet power-ups
-- Top-5 leaderboard flow with local record submission
-- Visual glitch and pulse effects tied to gameplay events
+Notes:
+- The page reads initial leaderboard data server-side before rendering.
+- On small screens the UI explicitly shows a restricted-access fallback instead of the full game canvas.
+
+### 2. Snake
 
 Route: `/snake`
 
-### Poker
+Snake is implemented as a configurable session-based module with calibration options before launch and a score-submission flow after defeat.
 
-A video-poker style implementation using the Jacks or Better ruleset and a persistent local credit bank.
+Implemented features:
+- Two board sizes: `20x20` and `30x30`
+- Two modes: `CLASSIC` and `MISSION`
+- Optional `Secure Layer` toggle for firewall obstacles
+- Optional `Overclock` toggle for special data packets
+- Level progression, velocity tracking, score tracking, and session message log
+- Top-score list loaded from records storage
+- Score upload after game over
+- Local persistence of the last entered operator name
+- Audio loading for ambient, victory, eat, fail, and click effects
 
-Highlights:
-- Five-card deal, hold, and draw flow
-- Standard Jacks or Better paytable
-- Persistent credits via LocalStorage
-- Bankruptcy reset flow
-- Skeuomorphic card-table UI with dedicated sound effects
+Notes:
+- The page loads leaderboard data for the `snake` game key.
+- The game exposes separate “stay”, restart, and exit flows after a run ends.
+
+### 3. Poker
 
 Route: `/poker`
 
-### Blackjack
+Poker is a video-poker style module built around a single-player Jacks or Better flow with local credit persistence.
 
-A terminal-themed Blackjack duel against the dealer with a persistent credit system and optional house-rule variation.
+Implemented features:
+- Standard 52-card deck creation and shuffle
+- Five-card deal
+- Per-card hold toggles
+- Draw phase replacing only non-held cards
+- Jacks or Better hand evaluation
+- Built-in paytable
+- Fixed bet of 10 credits
+- Persistent local credit bank
+- Bankruptcy flow with credit reset
+- Dedicated card, chip, win, and fold sound effects
 
-Highlights:
-- Dealer logic that hits below 17 and stands on 17+
-- Double Down on the opening hand
-- Optional 5-card Charlie rule toggle
-- Persistent credits via LocalStorage
-- Reset flow for empty bankroll states
+Implemented hand results:
+- Royal Flush
+- Straight Flush
+- Four of a Kind
+- Full House
+- Flush
+- Straight
+- Three of a Kind
+- Two Pair
+- Jacks or Better
+
+### 4. Blackjack
 
 Route: `/blackjack`
 
-### Sea Battle
+Blackjack is a dealer-vs-player card game with a persistent bank, a fixed starting bet, and an optional special-rule toggle.
 
-A tactical Battleship-inspired module with a radar interface, automated fleet deployment, and an AI opponent built around search and hunt logic.
+Implemented features:
+- Standard shuffled 52-card deck
+- Dealer hand with one hidden card during player turn
+- Fixed initial bet of 10 credits
+- Player actions: `Hit`, `Stand`, `Double`
+- Dealer draws until reaching 17 or more
+- Automatic handling of bust, draw, win, and loss states
+- Persistent local bankroll
+- Bankruptcy reset flow
+- Optional `Charlie Protocol` toggle
 
-Highlights:
-- 10x10 battlefield with classic fleet composition
-- Auto-placement that prevents adjacent ships
-- AI using checkerboard search and vector-based follow-up targeting
-- Automatic halo marking around destroyed ships
-- Unlockable depth-charge attack after sinking the enemy flagship
+Charlie Protocol:
+- When enabled, reaching five player cards without busting triggers an automatic win.
+
+### 5. Sea Battle
 
 Route: `/seabattle`
 
-### Tic-Tac-Toe
+Sea Battle is a Battleship-style tactical module with radar presentation, auto-deployed fleets, combat logs, and special-ability logic.
 
-A polished local or AI-driven Tic-Tac-Toe module with multiple difficulty levels and different opening behaviors.
+Implemented features:
+- 10x10 own grid and enemy grid
+- Automatic fleet placement
+- Classic ship set using segment IDs in a grid matrix
+- Turn-based player vs AI combat
+- Tactical log with severity levels
+- Fleet integrity and progress indicators
+- Enemy ship analysis and own-fleet analysis tracking
+- AI hunting stack for follow-up targeting after hits
+- Depth Charge ability for both player and AI
+- Full-screen bomb alert overlay when Depth Charge is used
+- Two gameplay modes: `CASUAL` and `HARDCORE`
 
-Highlights:
-- Human vs Human and Human vs AI modes
-- Three AI levels: random, imperfect tactical, and perfect minimax
-- Terminal-first opening when the session starts before the player moves
-- Local win/loss history storage
+Mode behavior:
+- `CASUAL` marks surrounding water around sunk ships.
+- `HARDCORE` keeps the “ghost protocol” behavior without that assist.
+
+Depth Charge behavior:
+- Player and AI start with the ability locked.
+- The ability unlocks after the opposing flagship condition is met.
+- Once active, it switches targeting to an area-of-effect strike.
+
+### 6. Tic-Tac-Toe
 
 Route: `/tictactoe`
 
-## Shared UX Features
+Tic-Tac-Toe is a local duel module that supports both human-vs-human play and AI play with three difficulty tiers.
 
-- Unified retro-terminal homepage for launching all games
-- Responsive layout adapted for desktop and mobile screens
-- Shared tactile UI language with inset and raised surfaces
-- Theme-aware visual treatment across the collection
-- Palette/design-system page at `/palette`
+Implemented features:
+- `PvE` and `PvP` modes
+- AI difficulties: `INFANT`, `ADULT`, `MERCILESS`
+- `MERCILESS` uses minimax search
+- Turn-state tracking
+- Win, loss, and draw history persistence
+- Winning-line highlight
+- Separate start actions for player-first and terminal-first sessions in PvE
+- Resettable local history panel
 
-## Notes
+AI behavior:
+- `INFANT` chooses random valid moves
+- `ADULT` plays near-optimally but can intentionally choose weaker moves
+- `MERCILESS` uses best-move evaluation and is intended to be unbeatable
 
-- The repository currently tracks source files and selected static assets.
-- Build output such as `.next/` and installed dependencies such as `node_modules/` are intentionally excluded from Git.
-- Game behavior details and design intentions are documented further in the `specs/` directory.
+## Shared UI Characteristics
+
+Across the project, the games share a common visual language:
+- Retro terminal framing
+- Raised and inset tactile surfaces
+- Heavy uppercase UI typography
+- Audio feedback in selected modules
+- Animated status labels, HUD blocks, and control panels
+- Dedicated back/exit flow from each game to the main hub
+
+## Records API
+
+`/api/records` supports:
+- `GET` - returns records for the default game source
+- `POST` - writes a new score entry for the provided game and returns the top entries
+
+The write path stores only the top 5 scores per game key.
+
+## Git Notes
+
+The repository is meant to track source files and selected static assets. The following categories are intentionally excluded from Git:
+- Installed dependencies such as `node_modules/`
+- Next.js build output such as `.next/`
+- Local environment files such as `.env*`
+- Local generated data such as `frontend/data/records.json`
+- Debug logs and temporary build artifacts
+
+This means a clean install on another machine should be restored with `npm install`, while runtime build output and local-only data will be recreated as needed.
+
+## Specs
+
+Game-specific design notes are also present in:
+- `specs/spec-tetris.md`
+- `specs/spec-snake.md`
+- `specs/spec-poker.md`
+- `specs/spec-blackjack.md`
+- `specs/spec-sea-battle.md`
+- `specs/spec-tic-tac-toe.md`
